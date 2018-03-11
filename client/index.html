@@ -1,0 +1,211 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<style>
+.osd {
+    border: 1px solid black;
+    padding: 1rem;
+}
+.osd > * {
+    margin: 0;
+    padding: 0;
+    height: 1.5rem;
+}
+
+.osd > *:first-child {
+    text-align: center;
+    font-weight: bold;
+}
+
+.osd > *.active {
+    background: yellow;
+}
+.osd > *:after {
+    position: absolute;
+    right: 20;
+    content: attr(data-bits);
+}
+
+</style>
+</head>
+<body>
+
+<button data-bind="click: vol_up">Up</button>
+<button data-bind="click: vol_dn">Down</button>
+<button data-bind="click: mute_toggle">Mute</button>
+<span data-bind="text: muted() ? 'MUTE' : volume()"></span>
+
+<ul class="nav nav-tabs" data-bind="foreach: available_inputs">
+  <li class="nav-item">
+    <a class="nav-link active" href="#" data-toggle="tab" role="tab" data-bind="
+        click: function () { $parent.change_input(value); },
+        css: { active: $parent.input() === value },
+        attr: {
+            'aria-controls': value,
+            'aria-selected': $parent.input() === value,
+            id: value + '-tab' },
+        text: text"></a>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show" id="internet" role="tabpanel" aria-labelledby="STANDBY-tab"
+      data-bind="css: { show: input() === 'STANDBY', active: input() === 'STANDBY'}">
+    zzzz
+  </div>
+
+  <div class="tab-pane fade show" id="internet" role="tabpanel" aria-labelledby="SERVER-tab"
+      data-bind="
+          css: {
+              show: ['SERVER', 'IRADIO', 'BLUETOOTH'].indexOf(input()) > -1,
+              active: ['SERVER', 'IRADIO', 'BLUETOOTH'].indexOf(input()) > -1,
+          }">
+    <div class="osd" data-bind="click: i_refresh, foreach: osd">
+        <div data-bind="
+            css: { active: active },
+            attr: { 'data-bits': bits },
+            text: text"></div>
+    </div>
+  </div>
+
+</div>
+
+<button data-bind="click: i_left">Left</button>
+<button data-bind="click: i_up">Up</button>
+<button data-bind="click: i_enter">Enter</button>
+<button data-bind="click: i_down">Down</button>
+<button data-bind="click: i_right">Right</button>
+
+<script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js"></script>
+<script>
+function OsdLine() {
+    this.text = ko.observable('');
+    this.bits = ko.observable(0);
+
+    this.icon = ko.pureComputed(function () {
+        if (this.bits() & 0x1) { return 'file'; }
+        if (this.bits() & 0x2) { return 'folder'; }
+        return 'none';
+    }, this);
+
+    this.active = ko.pureComputed(function () {
+        return (this.bits() & 0x8);
+    }, this);
+}
+
+function ViewModel() {
+    this.power = ko.observable(false);
+    this.available_inputs = [
+         { value: 'STANDBY', text: 'Standby' },
+         { value: 'TUNER', text: 'Tuner' },
+         { value: 'SERVER', text: 'DLNA' },
+         { value: 'IRADIO', text: 'Internet radio' },
+         { value: 'CD', text: 'CD' },
+         { value: 'BLUETOOTH', text: 'Bluetooth' },
+    ]
+    this.input = ko.observable("");
+    this.volume = ko.observable(0);
+    this.muted = ko.observable(false);
+    this.osd = [new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine()];
+
+    this.incoming = function (data) {
+        var i, m;
+
+        for (i = 0; i < this.incoming_handlers.length; i++) {
+            m = data.match(this.incoming_handlers[i][0]);
+
+            if (m) {
+                this.incoming_handlers[i][1].call(this, m);
+                return;
+            }
+        }
+        console.log("Unhandled: " + data);
+    };
+
+    this.incoming_handlers = [
+        [/^PW(ON|STANDBY)\r$/, function (m) {
+            this.power(m[1] === 'ON');
+            if (m[1] === 'STANDBY') { this.input('STANDBY'); }
+        }],
+        [/^SI(.*)\r$/, function (m) {
+            if (this.power()) {
+                this.input(m[1]);
+            } else {
+                this.input('STANDBY');
+            }
+        }],
+        [/^MV(?:VOA)?(\d{2})\r$/, function (m) {
+            this.volume(parseInt(m[1], 10));
+        }],
+        [/^MU(?:VOA)?(ON|OFF)\r$/, function (m) {
+            this.muted(m[1] === 'ON');
+        }],
+        [/^NS[AE](\d)/, function (m) {
+            var line, i = parseInt(m[1], 10),
+                line = m.input.substr(4);
+
+            if (i > 0 && i < 8) {
+                this.osd[i].bits(line.charCodeAt(0));
+                line = line.substr(1);
+            } else {
+                this.osd[i].bits(0);
+            }
+
+            this.osd[i].text(line);
+        }],
+    ];
+
+    this.tick = function() {
+        this.i_refresh();
+    };
+    setInterval(this.tick.bind(this), 10000);
+
+    this.power_toggle = function () { send_cmd(this.power() ? "PWSTANDBY" : "PWON"); };
+    this.change_input = function (i) {
+        if (i === 'STANDBY') {
+            send_cmd("PWSTANDBY");
+        } else if (!this.power()) {
+            send_cmd("PWON");
+            window.setTimeout(send_cmd, 300, "SI" + i);
+        } else {
+            send_cmd("SI" + i);
+        }
+    };
+    this.vol_up = function () { send_cmd("MVUP"); };
+    this.vol_dn = function () { send_cmd("MVDOWN"); };
+    this.mute_toggle = function () { send_cmd(this.muted() ? "MUOFF" : "MUON"); };
+    this.mute_on = function () { send_cmd("MUON"); };
+    this.mute_off = function () { send_cmd("MUOFF"); };
+    this.i_refresh = function () { send_cmd("NSE"); };
+    this.i_up    = function () { send_cmd("NS90"); window.setTimeout(send_cmd, 300, "NSE"); };
+    this.i_down  = function () { send_cmd("NS91"); window.setTimeout(send_cmd, 300, "NSE"); };
+    this.i_left  = function () { send_cmd("NS92"); window.setTimeout(send_cmd, 300, "NSE"); };
+    this.i_right = function () { send_cmd("NS93"); window.setTimeout(send_cmd, 300, "NSE"); };
+    this.i_enter = function () { send_cmd("NS94"); window.setTimeout(send_cmd, 300, "NSE"); };
+}
+
+const socket = new WebSocket('ws://' + document.location.host + '/');
+const vm = new ViewModel();
+
+socket.addEventListener('message', function (event) {
+    const fr = new FileReader();
+    fr.onload = function () {
+        vm.incoming(fr.result);
+    };
+    fr.readAsText(event.data);
+});
+
+socket.addEventListener('open', function (event) {
+    send_cmd("PW?");
+    send_cmd("MV?");
+    send_cmd("SI?");
+    send_cmd("NSE");
+});
+
+function send_cmd(cmd) {
+    socket.send(cmd);
+}
+
+ko.applyBindings(vm);
+</script></body>
+</html>
