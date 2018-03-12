@@ -156,7 +156,13 @@ function ViewModel() {
     ];
 
     this.tick = function() {
-        this.i_refresh();
+        switch (this.input()) {
+            case 'SERVER':
+            case 'IRADIO':
+            case 'BLUETOOTH':
+                this.i_refresh();
+                break;
+        }
     };
     setInterval(this.tick.bind(this), 10000);
 
