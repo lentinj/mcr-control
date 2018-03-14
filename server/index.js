@@ -11,6 +11,7 @@ const hifi = new net.Socket();
 
 app.use(express.static(__dirname + '/../client'));
 
+hifi.setEncoding("utf8");
 hifi.connect(23, 'kitchen-radio', function() {
     console.log('Connected to Hifi');
 });
@@ -20,12 +21,20 @@ hifi.on('close', function() {
 });
 
 hifi.on('data', function(data) {
-    console.log('Incoming: ' + data);
-    wss.clients.forEach(function each(client) {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(data);
+    var i, lines;
+
+    lines = data.split('\r');
+    for (i = 0; i < lines.length; i++) {
+        if (!lines[i]) {
+            continue
         }
-    });
+        console.log('Incoming: ' + lines[i]);
+        wss.clients.forEach(function each(client) {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(lines[i]);
+            }
+        });
+    }
 });
 
 wss.on('connection', function connection(ws) {

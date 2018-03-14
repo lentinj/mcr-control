@@ -123,21 +123,21 @@ function ViewModel() {
     };
 
     this.incoming_handlers = [
-        [/^PW(ON|STANDBY)\r$/, function (m) {
+        [/^PW(ON|STANDBY)$/, function (m) {
             this.power(m[1] === 'ON');
             if (m[1] === 'STANDBY') { this.input('STANDBY'); }
         }],
-        [/^SI(.*)\r$/, function (m) {
+        [/^SI(.*)$/, function (m) {
             if (this.power()) {
                 this.input(m[1]);
             } else {
                 this.input('STANDBY');
             }
         }],
-        [/^MV(?:VOA)?(\d{2})\r$/, function (m) {
+        [/^MV(?:VOA)?(\d{2})$/, function (m) {
             this.volume(parseInt(m[1], 10));
         }],
-        [/^MU(?:VOA)?(ON|OFF)\r$/, function (m) {
+        [/^MU(?:VOA)?(ON|OFF)$/, function (m) {
             this.muted(m[1] === 'ON');
         }],
         [/^NS[AE](\d)/, function (m) {
@@ -194,11 +194,7 @@ const socket = new WebSocket('ws://' + document.location.host + '/');
 const vm = new ViewModel();
 
 socket.addEventListener('message', function (event) {
-    const fr = new FileReader();
-    fr.onload = function () {
-        vm.incoming(fr.result);
-    };
-    fr.readAsText(event.data);
+    vm.incoming(event.data);
 });
 
 socket.addEventListener('open', function (event) {
