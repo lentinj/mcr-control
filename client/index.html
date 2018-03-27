@@ -246,8 +246,14 @@ function ViewModel() {
         [/^TFAN([0-9]+)/, function (m) {
             this.tuner_freq(parseInt(m[1], 10) / 100);
         }],
+        [/^TFDA000$/, function (m) {
+            this.tuner_freq("");
+        }],
         [/^TFDA(\d\d[A-Z]) ([0-9.]+)/, function (m) {
             this.tuner_freq(m[1] + ' ' + m[2]);
+        }],
+        [/^TMAN(AUTO|MANUAL)/, function (m) {
+            // We don't care if tuner is in manual or auto mode
         }],
     ];
 
