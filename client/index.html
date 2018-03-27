@@ -17,6 +17,9 @@
     font-weight: bold;
 }
 
+.osd > *.folder {
+    color: green;
+}
 .osd > *.active {
     background: yellow;
 }
@@ -26,14 +29,32 @@
     content: attr(data-bits);
 }
 
+table.dpad {
+    text-align: center;
+}
+table.dpad button {
+    width: 4rem;
+}
+
 </style>
 </head>
-<body>
+<body style="margin: 5px;">
 
 <button data-bind="click: vol_up">Up</button>
 <button data-bind="click: vol_dn">Down</button>
 <button data-bind="click: mute_toggle">Mute</button>
 <span data-bind="text: muted() ? 'MUTE' : volume()"></span>
+
+<select
+    style="float: right; margin: 7px 7px 0 0;"
+    data-bind="
+        options: favourites,
+        optionsValue: 'id',
+        optionsText: 'text',
+        value: selected_favourite,
+        "></select>
+
+<p></p>
 
 <ul class="nav nav-tabs" data-bind="foreach: available_inputs">
   <li class="nav-item">
@@ -49,32 +70,66 @@
 </ul>
 
 <div class="tab-content">
-  <div class="tab-pane fade show" id="internet" role="tabpanel" aria-labelledby="STANDBY-tab"
+  <div class="tab-pane fade show" role="tabpanel" aria-labelledby="STANDBY-tab"
       data-bind="css: { show: input() === 'STANDBY', active: input() === 'STANDBY'}">
     zzzz
   </div>
 
-  <div class="tab-pane fade show" id="internet" role="tabpanel" aria-labelledby="SERVER-tab"
+  <div class="tab-pane fade show" role="tabpanel" aria-labelledby="SERVER-tab"
       data-bind="
           css: {
               show: ['SERVER', 'IRADIO', 'BLUETOOTH'].indexOf(input()) > -1,
               active: ['SERVER', 'IRADIO', 'BLUETOOTH'].indexOf(input()) > -1,
           }">
-    <div class="osd" data-bind="click: i_refresh, foreach: osd">
+    <div class="osd" data-bind="click: tick, foreach: osd">
         <div data-bind="
-            css: { active: active },
-            attr: { 'data-bits': bits },
+            attr: { 'data-bits': bits, 'class': type().join(' ') },
             text: text"></div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade show" role="tabpanel" aria-labelledby="TUNER-tab"
+      data-bind="
+          css: {
+              show: ['TUNER'].indexOf(input()) > -1,
+              active: ['TUNER'].indexOf(input()) > -1,
+          }">
+
+    <ul class="nav nav-tabs" data-bind="foreach: available_bands">
+      <li class="nav-item">
+        <a class="nav-link" href="#" data-toggle="tab" role="tab" data-bind="
+            click: function () { $parent.tuner_band_change(value); },
+            css: { active: $parent.tuner_band() === value },
+            attr: {
+                'aria-controls': value,
+                'aria-selected': $parent.tuner_band() === value,
+                id: value + '-tab' },
+            text: text"></a>
+      </li>
+    </ul>
+
+    <div class="osd" data-bind="click: tick">
+      <div><span data-bind="text: tuner_name"></span> (<span data-bind="text: tuner_freq"></span>)</div>
     </div>
   </div>
 
 </div>
 
-<button data-bind="click: i_left">Left</button>
-<button data-bind="click: i_up">Up</button>
-<button data-bind="click: i_enter">Enter</button>
-<button data-bind="click: i_down">Down</button>
-<button data-bind="click: i_right">Right</button>
+<table class="dpad">
+  <tr>
+    <td></td>
+    <td><button data-bind="click: i_up">Up</button></td>
+    <td></td>
+  </tr><tr>
+    <td><button data-bind="click: i_left">Left</button></td>
+    <td><button data-bind="click: i_enter">Enter</button></td>
+    <td><button data-bind="click: i_right">Right</button></td>
+  </tr><tr>
+    <td></td>
+    <td><button data-bind="click: i_down">Down</button></td>
+    <td></td>
+  </tr>
+</table>
 
 <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js"></script>
 <script>
@@ -82,15 +137,22 @@ function OsdLine() {
     this.text = ko.observable('');
     this.bits = ko.observable(0);
 
-    this.icon = ko.pureComputed(function () {
-        if (this.bits() & 0x1) { return 'file'; }
-        if (this.bits() & 0x2) { return 'folder'; }
-        return 'none';
+    this.type = ko.pureComputed(function () {
+        rv = [];
+        if (this.bits() & 0x1) { rv.push('file'); }
+        if (this.bits() & 0x2) { rv.push('folder'); }
+        if (this.bits() & 0x8) { rv.push('active'); }
+        return rv;
     }, this);
 
     this.active = ko.pureComputed(function () {
         return (this.bits() & 0x8);
     }, this);
+}
+
+function Favourite(initial_id, initial_text) {
+    this.id = ko.observable(initial_id);
+    this.text = ko.observable(initial_text);
 }
 
 function ViewModel() {
@@ -107,6 +169,15 @@ function ViewModel() {
     this.volume = ko.observable(0);
     this.muted = ko.observable(false);
     this.osd = [new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine()];
+    this.favourites = ko.observableArray([new Favourite(0, "Select a favourite...")]);
+    this.selected_favourite = ko.observable();
+    this.available_bands = [
+         { value:'DA', text: 'Digital' },
+         { value:'FM', text: 'FM' },
+    ];
+    this.tuner_band = ko.observable("");
+    this.tuner_name = ko.observable("");
+    this.tuner_freq = ko.observable(0);
 
     this.incoming = function (data) {
         var i, m;
@@ -153,14 +224,53 @@ function ViewModel() {
 
             this.osd[i].text(line);
         }],
+        [/^FV(\d{2})\s*(.*)$/, function (m) {
+            var id = parseInt(m[1], 10);
+
+            if(this.favourites.length < id) {
+                // TODO: Something sensible
+                this.favourites.push(new Favourite(id, m[2]));
+            } else {
+                this.favourites()[id] = new Favourite(id, m[2]);
+            }
+        }],
+        [/^TMAN(AM|FM)$/, function (m) {
+            this.tuner_band(m[1]);
+        }],
+        [/^TMDA$/, function (m) {
+            this.tuner_band("DA");
+        }],
+        [/^(TFDANAME|TFANNAME)(.*)/, function (m) {
+            this.tuner_name(m[2]);
+        }],
+        [/^TFAN([0-9]+)/, function (m) {
+            this.tuner_freq(parseInt(m[1], 10) / 100);
+        }],
+        [/^TFDA(\d\d[A-Z]) ([0-9.]+)/, function (m) {
+            this.tuner_freq(m[1] + ' ' + m[2]);
+        }],
     ];
+
+    this.selected_favourite.subscribe(function (new_id) {
+        if (new_id === 0) {
+            return;
+        }
+
+        send_cmd("PWON");
+
+        send_cmd("FV " + (new_id < 10 ? "0" : "") + new_id);
+        //window.setTimeout(this.call(this, 0), 1000);
+    });
 
     this.tick = function() {
         switch (this.input()) {
             case 'SERVER':
             case 'IRADIO':
             case 'BLUETOOTH':
-                this.i_refresh();
+                send_cmd("NSE");
+                break;
+            case 'TUNER':
+                send_cmd("TM?");
                 break;
         }
     };
@@ -177,17 +287,33 @@ function ViewModel() {
             send_cmd("SI" + i);
         }
     };
+    this.tuner_band_change = function (b) {
+        send_cmd(b === 'DA' ? "TMDA" : ("TMAN" + b));
+    }
     this.vol_up = function () { send_cmd("MVUP"); };
     this.vol_dn = function () { send_cmd("MVDOWN"); };
     this.mute_toggle = function () { send_cmd(this.muted() ? "MUOFF" : "MUON"); };
     this.mute_on = function () { send_cmd("MUON"); };
     this.mute_off = function () { send_cmd("MUOFF"); };
-    this.i_refresh = function () { send_cmd("NSE"); };
-    this.i_up    = function () { send_cmd("NS90"); window.setTimeout(send_cmd, 300, "NSE"); };
-    this.i_down  = function () { send_cmd("NS91"); window.setTimeout(send_cmd, 300, "NSE"); };
-    this.i_left  = function () { send_cmd("NS92"); window.setTimeout(send_cmd, 300, "NSE"); };
-    this.i_right = function () { send_cmd("NS93"); window.setTimeout(send_cmd, 300, "NSE"); };
-    this.i_enter = function () { send_cmd("NS94"); window.setTimeout(send_cmd, 300, "NSE"); };
+    this.i_up    = function () {
+        if (this.input() === 'TUNER') {
+            send_cmd("TFANUP");
+        } else {
+            send_cmd("NS90");
+        }
+        window.setTimeout(this.tick.bind(this), 300);
+    };
+    this.i_down  = function () {
+        if (this.input() === 'TUNER') {
+            send_cmd("TFANDOWN");
+        } else {
+            send_cmd("NS91");
+        }
+        window.setTimeout(this.tick.bind(this), 300);
+    };
+    this.i_left  = function () { send_cmd("NS92"); window.setTimeout(this.tick.bind(this), 300); };
+    this.i_right = function () { send_cmd("NS93"); window.setTimeout(this.tick.bind(this), 300); };
+    this.i_enter = function () { send_cmd("NS94"); window.setTimeout(this.tick.bind(this), 300); };
 }
 
 const socket = new WebSocket('ws://' + document.location.host + '/');
@@ -202,6 +328,7 @@ socket.addEventListener('open', function (event) {
     send_cmd("MV?");
     send_cmd("SI?");
     send_cmd("NSE");
+    send_cmd("FV ?");
 });
 
 function send_cmd(cmd) {
