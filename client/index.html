@@ -118,15 +118,15 @@ table.dpad button {
 <table class="dpad">
   <tr>
     <td></td>
-    <td><button data-bind="click: i_up">Up</button></td>
+    <td><button data-bind="click: d_pad_press('up')">Up</button></td>
     <td></td>
   </tr><tr>
-    <td><button data-bind="click: i_left">Left</button></td>
-    <td><button data-bind="click: i_enter">Enter</button></td>
-    <td><button data-bind="click: i_right">Right</button></td>
+    <td><button data-bind="click: d_pad_press('left')">Left</button></td>
+    <td><button data-bind="click: d_pad_press('enter')">Enter</button></td>
+    <td><button data-bind="click: d_pad_press('right')">Right</button></td>
   </tr><tr>
     <td></td>
-    <td><button data-bind="click: i_down">Down</button></td>
+    <td><button data-bind="click: d_pad_press('down')">Down</button></td>
     <td></td>
   </tr>
 </table>
@@ -295,25 +295,29 @@ function ViewModel() {
     this.mute_toggle = function () { send_cmd(this.muted() ? "MUOFF" : "MUON"); };
     this.mute_on = function () { send_cmd("MUON"); };
     this.mute_off = function () { send_cmd("MUOFF"); };
-    this.i_up    = function () {
-        if (this.input() === 'TUNER') {
-            send_cmd("TFANUP");
-        } else {
-            send_cmd("NS90");
+
+    this.d_pad_press = function (direction) {
+        switch (this.input()) {
+            case 'SERVER':
+            case 'IRADIO':
+            case 'BLUETOOTH':
+                send_cmd( direction === 'up' ? "NS90"
+                        : direction === 'down' ? "NS91"
+                        : direction === 'left' ? "NS92"
+                        : direction === 'right' ? "NS93"
+                        : direction === 'enter' ? "NS94"
+                        : "");
+                break;
+            case 'TUNER':
+                send_cmd( direction === 'up' ? "TFANUP"
+                        : direction === 'down' ? "TFANDOWN"
+                        : direction === 'left' ? "TFANUP"
+                        : direction === 'right' ? "TFANDOWN"
+                        : "");
+                break;
         }
         window.setTimeout(this.tick.bind(this), 300);
     };
-    this.i_down  = function () {
-        if (this.input() === 'TUNER') {
-            send_cmd("TFANDOWN");
-        } else {
-            send_cmd("NS91");
-        }
-        window.setTimeout(this.tick.bind(this), 300);
-    };
-    this.i_left  = function () { send_cmd("NS92"); window.setTimeout(this.tick.bind(this), 300); };
-    this.i_right = function () { send_cmd("NS93"); window.setTimeout(this.tick.bind(this), 300); };
-    this.i_enter = function () { send_cmd("NS94"); window.setTimeout(this.tick.bind(this), 300); };
 }
 
 const socket = new WebSocket('ws://' + document.location.host + '/');
