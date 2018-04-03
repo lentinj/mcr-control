@@ -95,23 +95,9 @@ table.dpad button {
   <div class="tab-pane fade show" role="tabpanel" aria-labelledby="TUNER-tab"
       data-bind="
           css: {
-              show: ['TUNER'].indexOf(input()) > -1,
-              active: ['TUNER'].indexOf(input()) > -1,
+              show: ['AM', 'FM', 'DA'].indexOf(input()) > -1,
+              active: ['AM', 'FM', 'DA'].indexOf(input()) > -1,
           }">
-
-    <ul class="nav nav-tabs" data-bind="foreach: available_bands">
-      <li class="nav-item">
-        <a class="nav-link" href="#" data-toggle="tab" role="tab" data-bind="
-            click: function () { $parent.tuner_band_change(value); },
-            css: { active: $parent.tuner_band() === value },
-            attr: {
-                'aria-controls': value,
-                'aria-selected': $parent.tuner_band() === value,
-                id: value + '-tab' },
-            text: text"></a>
-      </li>
-    </ul>
-
     <div class="osd" data-bind="click: tick">
       <div><span data-bind="text: tuner_name"></span> (<span data-bind="text: tuner_freq"></span>)</div>
     </div>
@@ -179,7 +165,8 @@ function ViewModel() {
     this.power = ko.observable(false);
     this.available_inputs = [
          { value: 'STANDBY', text: 'Standby' },
-         { value: 'TUNER', text: 'Tuner' },
+         { value: 'DA', text: 'DAB' },
+         { value: 'FM', text: 'FM' },
          { value: 'SERVER', text: 'DLNA' },
          { value: 'IRADIO', text: 'Internet radio' },
          { value: 'CD', text: 'CD' },
@@ -191,11 +178,6 @@ function ViewModel() {
     this.osd = [new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine()];
     this.favourites = ko.observableArray([new Favourite(0, "Select a favourite...")]);
     this.selected_favourite = ko.observable();
-    this.available_bands = [
-         { value:'DA', text: 'Digital' },
-         { value:'FM', text: 'FM' },
-    ];
-    this.tuner_band = ko.observable("");
     this.tuner_name = ko.observable("");
     this.tuner_freq = ko.observable(0);
 
@@ -219,6 +201,9 @@ function ViewModel() {
             if (m[1] === 'STANDBY') { this.input('STANDBY'); }
         }],
         [/^SI(.*)$/, function (m) {
+            if (m[1] === 'TUNER') {
+                return; // NB: We switch based on the band output
+            }
             if (this.power()) {
                 this.input(m[1]);
             } else {
@@ -255,10 +240,14 @@ function ViewModel() {
             }
         }],
         [/^TMAN(AM|FM)$/, function (m) {
-            this.tuner_band(m[1]);
+            if (this.power()) {
+                this.input(m[1]);
+            }
         }],
         [/^TMDA$/, function (m) {
-            this.tuner_band("DA");
+            if (this.power()) {
+                this.input("DA");
+            }
         }],
         [/^(TFDANAME|TFANNAME)(.*)/, function (m) {
             this.tuner_name(m[2]);
@@ -308,14 +297,17 @@ function ViewModel() {
             send_cmd("PWSTANDBY");
         } else if (!this.power()) {
             send_cmd("PWON");
-            window.setTimeout(send_cmd, 300, "SI" + i);
+            window.setTimeout(this.change_input.bind(this, i), 500);
+        } else if (i === 'DA') {
+            send_cmd("SITUNER");
+            send_cmd("TMDA");
+        } else if (i === 'FM') {
+            send_cmd("SITUNER");
+            send_cmd("TMAN" + i);
         } else {
             send_cmd("SI" + i);
         }
     };
-    this.tuner_band_change = function (b) {
-        send_cmd(b === 'DA' ? "TMDA" : ("TMAN" + b));
-    }
     this.vol_up = function () { send_cmd("MVUP"); };
     this.vol_dn = function () { send_cmd("MVDOWN"); };
     this.mute_toggle = function () { send_cmd(this.muted() ? "MUOFF" : "MUON"); };
@@ -364,6 +356,7 @@ socket.addEventListener('open', function (event) {
     send_cmd("SI?");
     send_cmd("NSE");
     send_cmd("FV ?");
+    send_cmd("TM?");
 });
 
 function send_cmd(cmd) {
