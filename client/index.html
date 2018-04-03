@@ -1,5 +1,6 @@
 <html>
 <head>
+<meta charset="utf-8" />
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 <style>
 .osd {
@@ -115,18 +116,34 @@ table.dpad button {
 
 </div>
 
-<table class="dpad">
+<table class="dpad" style="float: left">
   <tr>
     <td></td>
-    <td><button data-bind="click: d_pad_press('up')">Up</button></td>
+    <td><button data-bind="click: d_pad_press('up')">▲</button></td>
     <td></td>
   </tr><tr>
-    <td><button data-bind="click: d_pad_press('left')">Left</button></td>
-    <td><button data-bind="click: d_pad_press('enter')">Enter</button></td>
-    <td><button data-bind="click: d_pad_press('right')">Right</button></td>
+    <td><button data-bind="click: d_pad_press('left')">◄</button></td>
+    <td><button data-bind="click: d_pad_press('enter')">↵</button></td>
+    <td><button data-bind="click: d_pad_press('right')">►</button></td>
   </tr><tr>
     <td></td>
-    <td><button data-bind="click: d_pad_press('down')">Down</button></td>
+    <td><button data-bind="click: d_pad_press('down')">▼</button></td>
+    <td></td>
+  </tr>
+</table>
+
+<table class="dpad" style="float: right">
+  <tr>
+    <td></td>
+    <td><button data-bind="click: d_pad_press('eject')">⏏</button></td>
+    <td></td>
+  </tr><tr>
+    <td><button data-bind="click: d_pad_press('prev')">⏮</button></td>
+    <td><button data-bind="click: d_pad_press('playpause')">⏯</button></td>
+    <td><button data-bind="click: d_pad_press('next')">⏭</button></td>
+  </tr><tr>
+    <td></td>
+    <td><button data-bind="click: d_pad_press('stop')">⏹</button></td>
     <td></td>
   </tr>
 </table>
@@ -312,6 +329,11 @@ function ViewModel() {
                         : direction === 'left' ? "NS92"
                         : direction === 'right' ? "NS93"
                         : direction === 'enter' ? "NS94"
+                        : direction === 'eject' ? null
+                        : direction === 'prev' ? "NS9D"
+                        : direction === 'playpause' ? "NS9B" /* TODO: Need to toggle 9A/9B */
+                        : direction === 'next' ? "NS9E"
+                        : direction === 'stop' ? "NS9C"
                         : "");
                 break;
             case 'TUNER':
