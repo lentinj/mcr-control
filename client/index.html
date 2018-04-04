@@ -124,11 +124,11 @@ table.dpad button {
 <table class="dpad" style="float: right">
   <tr>
     <td></td>
-    <td><button data-bind="click: d_pad_press('eject')">⏏</button></td>
+    <td><button data-bind="click: d_pad_press('play')">▶</button></td>
     <td></td>
   </tr><tr>
     <td><button data-bind="click: d_pad_press('prev')">⏮</button></td>
-    <td><button data-bind="click: d_pad_press('playpause')">⏯</button></td>
+    <td><button data-bind="click: d_pad_press('pause')">⏯</button></td>
     <td><button data-bind="click: d_pad_press('next')">⏭</button></td>
   </tr><tr>
     <td></td>
@@ -323,7 +323,8 @@ function ViewModel() {
                         : direction === 'enter' ? "NS94"
                         : direction === 'eject' ? null
                         : direction === 'prev' ? "NS9D"
-                        : direction === 'playpause' ? "NS9B" /* TODO: Need to toggle 9A/9B */
+                        : direction === 'play' ? "NS9A"
+                        : direction === 'pause' ? "NS9B"
                         : direction === 'next' ? "NS9E"
                         : direction === 'stop' ? "NS9C"
                         : "");
@@ -333,6 +334,20 @@ function ViewModel() {
                         : direction === 'down' ? "TFANDOWN"
                         : direction === 'left' ? "TFANUP"
                         : direction === 'right' ? "TFANDOWN"
+                        : "");
+                break;
+            case 'CD':
+                send_cmd( direction === 'up' ? "BDCURSOR UP"
+                        : direction === 'down' ? "BDCURSOR DOWN"
+                        : direction === 'left' ? "BDCURSOR LEFT"
+                        : direction === 'right' ? "BDCURSOR RIGHT"
+                        : direction === 'enter' ? "BDENTER"
+                        : direction === 'eject' ? "BDOPEN"
+                        : direction === 'prev' ? "BDSKIP -"
+                        : direction === 'play' ? "BDPLAY"
+                        : direction === 'pause' ? "BDPAUSE"
+                        : direction === 'next' ? "BDSKIP +"
+                        : direction === 'stop' ? "BDSTOP"
                         : "");
                 break;
         }
