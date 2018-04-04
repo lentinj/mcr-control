@@ -201,9 +201,6 @@ function ViewModel() {
             if (m[1] === 'STANDBY') { this.input('STANDBY'); }
         }],
         [/^SI(.*)$/, function (m) {
-            if (m[1] === 'TUNER') {
-                return; // NB: We switch based on the band output
-            }
             if (this.power()) {
                 this.input(m[1]);
             } else {
@@ -240,12 +237,12 @@ function ViewModel() {
             }
         }],
         [/^TMAN(AM|FM)$/, function (m) {
-            if (this.power()) {
+            if (this.input() === 'TUNER') {
                 this.input(m[1]);
             }
         }],
         [/^TMDA$/, function (m) {
-            if (this.power()) {
+            if (this.input() === 'TUNER') {
                 this.input("DA");
             }
         }],
