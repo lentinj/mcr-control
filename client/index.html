@@ -103,6 +103,18 @@ table.dpad button {
     </div>
   </div>
 
+  <div class="tab-pane fade show" role="tabpanel" aria-labelledby="CD-tab"
+      data-bind="
+          css: {
+              show: ['CD'].indexOf(input()) > -1,
+              active: ['CD'].indexOf(input()) > -1,
+          }">
+    <div class="osd" data-bind="click: tick">
+      <div>Track <span data-bind="text: cd_track"></span></div>
+      <div><span data-bind="text: cd_time"></span></div>
+    </div>
+  </div>
+
 </div>
 
 <table class="dpad" style="float: left">
@@ -182,6 +194,8 @@ function ViewModel() {
     this.selected_favourite = ko.observable();
     this.tuner_name = ko.observable("");
     this.tuner_freq = ko.observable(0);
+    this.cd_track = ko.observable();
+    this.cd_time = ko.observable();
 
     this.incoming = function (data) {
         var i, m;
@@ -262,6 +276,21 @@ function ViewModel() {
         }],
         [/^TMAN(AUTO|MANUAL)/, function (m) {
             // We don't care if tuner is in manual or auto mode
+        }],
+        [/^BDSTATUS ([4-6AB])([46;=])2000([0-4A-G])([1-9:;])000(\d{4})([49:;])(\d{2})(\d{2})(\d{2})/, function (m) { // 442000C100000039002000
+            // Disc type
+            // Audio format
+            // 2000 - 2 channel (fixed value, padding
+            // Status code (C - play)
+            // random / repeat bitfield
+            // 000 - fixed padding
+            // Track number
+            // Time display mode
+            // Time h
+            // Time m
+            // Time s
+            this.cd_track(parseInt(m[5], 10));
+            this.cd_time(m[7] + ':' + m[8] + ':' + m[9]);
         }],
     ];
 
