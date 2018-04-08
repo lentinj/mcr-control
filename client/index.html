@@ -82,8 +82,8 @@ table.dpad button {
   <div class="tab-pane fade show" role="tabpanel" aria-labelledby="SERVER-tab"
       data-bind="
           css: {
-              show: ['SERVER', 'IRADIO', 'BLUETOOTH'].indexOf(input()) > -1,
-              active: ['SERVER', 'IRADIO', 'BLUETOOTH'].indexOf(input()) > -1,
+              show: ['SERVER', 'IRADIO', 'BLUETOOTH', 'FRONTUSB', 'REARUSB'].indexOf(input()) > -1,
+              active: ['SERVER', 'IRADIO', 'BLUETOOTH', 'FRONTUSB', 'REARUSB'].indexOf(input()) > -1,
           }">
     <div class="osd" data-bind="click: tick, foreach: osd">
         <div data-bind="
@@ -171,6 +171,8 @@ function ViewModel() {
          { value: 'IRADIO', text: 'Internet radio' },
          { value: 'CD', text: 'CD' },
          { value: 'BLUETOOTH', text: 'Bluetooth' },
+         { value: 'FRONTUSB', text: 'Front USB' },
+         { value: 'REARUSB', text: 'Rear USB' },
     ]
     this.input = ko.observable("");
     this.volume = ko.observable(0);
@@ -279,6 +281,8 @@ function ViewModel() {
             case 'SERVER':
             case 'IRADIO':
             case 'BLUETOOTH':
+            case 'FRONTUSB':
+            case 'REARUSB':
                 send_cmd("NSE");
                 break;
             case 'TUNER':
@@ -316,6 +320,8 @@ function ViewModel() {
             case 'SERVER':
             case 'IRADIO':
             case 'BLUETOOTH':
+            case 'FRONTUSB':
+            case 'REARUSB':
                 send_cmd( direction === 'up' ? "NS90"
                         : direction === 'down' ? "NS91"
                         : direction === 'left' ? "NS92"
