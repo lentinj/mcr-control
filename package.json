@@ -1,0 +1,22 @@
+{
+  "name": "mcr-control",
+  "version": "0.1.1",
+  "description": "MCR-6111 control",
+  "dependencies": {
+    "bootstrap": "^4.0.0",
+    "express": "^4.16.3",
+    "knockout": "^3.4.2",
+    "ws": "^5.1.1"
+  },
+  "maintainers": [
+    {
+      "name": "Jamie Lentin",
+      "email": "jm@lentin.co.uk"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lentinj/mcr-control"
+  },
+  "license": "GPL-3.0"
+}
