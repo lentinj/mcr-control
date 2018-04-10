@@ -11,8 +11,13 @@ const hifi = new net.Socket();
 
 app.use(express.static(__dirname + '/../client'));
 
+if (process.argv.length < 3) {
+    console.log("Usage: " + process.argv[0] + " " + process.argv[1] + " (ip address)");
+    process.exit(1);
+}
+
 hifi.setEncoding("utf8");
-hifi.connect(23, 'kitchen-radio', function() {
+hifi.connect(23, process.argv[2], function() {
     console.log('Connected to Hifi');
 });
 
