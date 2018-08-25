@@ -35,7 +35,7 @@ table.dpad {
     text-align: center;
     margin: 1rem 5%;
 }
-table.dpad button {
+table.dpad td > * {
     width: 3rem;
     height: 2rem;
 }
@@ -43,22 +43,6 @@ table.dpad button {
 </style>
 </head>
 <body style="margin: 5px;">
-
-<button data-bind="click: vol_up">Up</button>
-<button data-bind="click: vol_dn">Down</button>
-<button data-bind="click: mute_toggle">Mute</button>
-<span data-bind="text: muted() ? 'MUTE' : volume()"></span>
-
-<select
-    style="float: right; margin: 7px 7px 0 0;"
-    data-bind="
-        options: favourites,
-        optionsValue: 'id',
-        optionsText: 'text',
-        value: selected_favourite,
-        "></select>
-
-<p></p>
 
 <ul class="nav nav-tabs" data-bind="foreach: available_inputs">
   <li class="nav-item">
@@ -149,6 +133,26 @@ table.dpad button {
   </tr>
 </table>
 
+<table class="dpad" style="margin-left: auto; margin-right: auto;">
+  <tr>
+    <td></td>
+    <td><button data-bind="click: vol_up">🔊</button></td>
+    <td></td>
+  </tr><tr>
+    <td><select data-bind="options: favourites,
+                           optionsValue: 'id',
+                           optionsText: 'text',
+                           value: selected_favourite,
+                          "></select></td>
+    <td><span data-bind="text: muted() ? 'MUTE' : volume()"></span></td>
+    <td><button data-bind="click: mute_toggle">🔇</button></td>
+  </tr><tr>
+    <td></td>
+    <td><button data-bind="click: vol_dn">🔉</button></td>
+    <td></td>
+  </tr>
+</table>
+
 <script type='text/javascript' src="/node_modules/knockout/build/output/knockout-latest.js"></script>
 <script>
 function OsdLine() {
@@ -190,7 +194,7 @@ function ViewModel() {
     this.volume = ko.observable(0);
     this.muted = ko.observable(false);
     this.osd = [new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine()];
-    this.favourites = ko.observableArray([new Favourite(0, "Select a favourite...")]);
+    this.favourites = ko.observableArray([new Favourite(0, "🖤 -Favourites-")]);
     this.selected_favourite = ko.observable();
     this.tuner_name = ko.observable("");
     this.tuner_freq = ko.observable(0);
