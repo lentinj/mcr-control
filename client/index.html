@@ -300,16 +300,27 @@ function ViewModel() {
         }],
     ];
 
-    this.selected_favourite.subscribe(function (new_id) {
+    this.selected_favourite.subscribe(function fn(new_id) {
+        fv_cmd = "FV " + (new_id < 10 ? "0" : "") + new_id;
+
         if (new_id === 0) {
             return;
         }
 
-        send_cmd("PWON");
+        // If it's not on, turn on and retry
+        if (!this.power()) {
+            send_cmd("PWON");
+            window.setTimeout(fn.bind(this, new_id), 500);
+            return;
+        }
 
-        send_cmd("FV " + (new_id < 10 ? "0" : "") + new_id);
-        //window.setTimeout(this.call(this, 0), 1000);
-    });
+        send_cmd(fv_cmd);
+
+        // Return selection back to default after a bit
+        window.setTimeout((function () {
+            this.selected_favourite(0);
+        }).bind(this), 3000);
+    }, this);
 
     this.tick = function() {
         switch (this.input()) {
