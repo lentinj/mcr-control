@@ -12,6 +12,7 @@
     margin: 0;
     padding: 0;
     height: 1.5rem;
+    overflow: hidden;
 }
 
 .osd > *:first-child {
@@ -25,10 +26,11 @@
 .osd > *.active {
     background: yellow;
 }
-.osd > *:after {
+.osd > *:before {
     position: absolute;
-    right: 20;
+    right: 10px;
     content: attr(data-bits);
+    font-size: x-small;
 }
 
 table.dpad {
