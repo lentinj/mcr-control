@@ -298,6 +298,14 @@ function ViewModel() {
             this.cd_track(parseInt(m[5], 10));
             this.cd_time(m[7] + ':' + m[8] + ':' + m[9]);
         }],
+        [/^__CONNECTED$/, function (m) {
+            this.send_cmd("PW?");
+            this.send_cmd("MV?");
+            this.send_cmd("SI?");
+            this.send_cmd("NSE");
+            this.send_cmd("FV ?");
+            this.send_cmd("TM?");
+        }],
     ];
 
     this.selected_favourite.subscribe(function fn(new_id) {
@@ -309,12 +317,12 @@ function ViewModel() {
 
         // If it's not on, turn on and retry
         if (!this.power()) {
-            send_cmd("PWON");
+            this.send_cmd("PWON");
             window.setTimeout(fn.bind(this, new_id), 500);
             return;
         }
 
-        send_cmd(fv_cmd);
+        this.send_cmd(fv_cmd);
 
         // Return selection back to default after a bit
         window.setTimeout((function () {
@@ -329,37 +337,37 @@ function ViewModel() {
             case 'BLUETOOTH':
             case 'FRONTUSB':
             case 'REARUSB':
-                send_cmd("NSE");
+                this.send_cmd("NSE");
                 break;
             case 'TUNER':
-                send_cmd("TM?");
+                this.send_cmd("TM?");
                 break;
         }
     };
     setInterval(this.tick.bind(this), 10000);
 
-    this.power_toggle = function () { send_cmd(this.power() ? "PWSTANDBY" : "PWON"); };
+    this.power_toggle = function () { this.send_cmd(this.power() ? "PWSTANDBY" : "PWON"); };
     this.change_input = function (i) {
         if (i === 'STANDBY') {
-            send_cmd("PWSTANDBY");
+            this.send_cmd("PWSTANDBY");
         } else if (!this.power()) {
-            send_cmd("PWON");
+            this.send_cmd("PWON");
             window.setTimeout(this.change_input.bind(this, i), 500);
         } else if (i === 'DA') {
-            send_cmd("SITUNER");
-            send_cmd("TMDA");
+            this.send_cmd("SITUNER");
+            this.send_cmd("TMDA");
         } else if (i === 'FM') {
-            send_cmd("SITUNER");
-            send_cmd("TMAN" + i);
+            this.send_cmd("SITUNER");
+            this.send_cmd("TMAN" + i);
         } else {
-            send_cmd("SI" + i);
+            this.send_cmd("SI" + i);
         }
     };
-    this.vol_up = function () { send_cmd("MVUP"); };
-    this.vol_dn = function () { send_cmd("MVDOWN"); };
-    this.mute_toggle = function () { send_cmd(this.muted() ? "MUOFF" : "MUON"); };
-    this.mute_on = function () { send_cmd("MUON"); };
-    this.mute_off = function () { send_cmd("MUOFF"); };
+    this.vol_up = function () { this.send_cmd("MVUP"); };
+    this.vol_dn = function () { this.send_cmd("MVDOWN"); };
+    this.mute_toggle = function () { this.send_cmd(this.muted() ? "MUOFF" : "MUON"); };
+    this.mute_on = function () { this.send_cmd("MUON"); };
+    this.mute_off = function () { this.send_cmd("MUOFF"); };
 
     this.d_pad_press = function (direction) {
         switch (this.input()) {
@@ -368,7 +376,7 @@ function ViewModel() {
             case 'BLUETOOTH':
             case 'FRONTUSB':
             case 'REARUSB':
-                send_cmd( direction === 'up' ? "NS90"
+                this.send_cmd( direction === 'up' ? "NS90"
                         : direction === 'down' ? "NS91"
                         : direction === 'left' ? "NS92"
                         : direction === 'right' ? "NS93"
@@ -382,14 +390,14 @@ function ViewModel() {
                         : "");
                 break;
             case 'TUNER':
-                send_cmd( direction === 'up' ? "TFANUP"
+                this.send_cmd( direction === 'up' ? "TFANUP"
                         : direction === 'down' ? "TFANDOWN"
                         : direction === 'left' ? "TFANUP"
                         : direction === 'right' ? "TFANDOWN"
                         : "");
                 break;
             case 'CD':
-                send_cmd( direction === 'up' ? "BDCURSOR UP"
+                this.send_cmd( direction === 'up' ? "BDCURSOR UP"
                         : direction === 'down' ? "BDCURSOR DOWN"
                         : direction === 'left' ? "BDCURSOR LEFT"
                         : direction === 'right' ? "BDCURSOR RIGHT"
@@ -407,25 +415,37 @@ function ViewModel() {
     };
 }
 
-const socket = new WebSocket('ws://' + document.location.host + '/');
-const vm = new ViewModel();
+function new_socket(socket_href) {
+    var socket = new WebSocket(socket_href);
 
-socket.addEventListener('message', function (event) {
-    vm.incoming(event.data);
-});
+    socket.addEventListener('message', function (event) {
+        vm.incoming(event.data);
+    });
 
-socket.addEventListener('open', function (event) {
-    send_cmd("PW?");
-    send_cmd("MV?");
-    send_cmd("SI?");
-    send_cmd("NSE");
-    send_cmd("FV ?");
-    send_cmd("TM?");
-});
+    socket.addEventListener('open', function (event) {
+        vm.incoming('__CONNECTED');
+    });
 
-function send_cmd(cmd) {
-    socket.send(cmd);
+    vm.send_cmd = function (cmd) {
+        if (socket.readyState != 1) {
+            console.log("Socket not ready: " + socket.readyState);
+            return;
+        }
+        socket.send(cmd);
+    };
+
+    socket.addEventListener('close', function (event) {
+        console.log("Disconnected. Trying to reconnect in 5s...");
+        setTimeout(function () {
+            new_socket(socket_href);
+        }, 5000);
+    });
+
+    return socket;
 }
+
+const vm = new ViewModel();
+new_socket('ws://' + document.location.host + '/');
 
 ko.applyBindings(vm);
 </script></body>
