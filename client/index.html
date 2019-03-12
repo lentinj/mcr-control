@@ -174,9 +174,20 @@ function OsdLine() {
     }, this);
 }
 
-function Favourite(initial_id, initial_text) {
-    this.id = ko.observable(initial_id);
-    this.text = ko.observable(initial_text);
+function Favourite(initial_id, initial_type, initial_title) {
+    var type_map = {
+        0: '🌐',  // Internet radio
+        1: '📂',  // DLNA
+        2: '📻',  // DAB/FM Radio
+        8: '💾',  // USB
+        99: '❔', // Empty entries (self-defined)
+        100: '🖤',  // Favourites title (self-defined)
+    };
+
+    this.id = initial_id;
+    this.type = initial_type === null ? 99 : initial_type;
+    this.title = initial_title || '(empty - ' + this.id + ')';
+    this.text = (type_map[this.type] || this.type) + ' ' + this.title;
 }
 
 function ViewModel() {
@@ -196,7 +207,7 @@ function ViewModel() {
     this.volume = ko.observable(0);
     this.muted = ko.observable(false);
     this.osd = [new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine(), new OsdLine()];
-    this.favourites = ko.observableArray([new Favourite(0, "🖤 -Favourites-")]);
+    this.favourites = ko.observableArray([new Favourite(0, 100, "Favourites")]);
     this.selected_favourite = ko.observable();
     this.tuner_name = ko.observable("");
     this.tuner_freq = ko.observable(0);
@@ -248,15 +259,16 @@ function ViewModel() {
 
             this.osd[i].text(line);
         }],
-        [/^FV(\d{2})\s*(.*)$/, function (m) {
+        [/^FV(\d{2})\s*(\d{0,2})\s*(.*)$/, function (m) {
             var id = parseInt(m[1], 10);
 
-            if(this.favourites.length < id) {
-                // TODO: Something sensible
-                this.favourites.push(new Favourite(id, m[2]));
-            } else {
-                this.favourites()[id] = new Favourite(id, m[2]);
+            // Fill up array to required level
+            while (this.favourites().length < id) {
+                this.favourites.push(new Favourite(id, null, ''));
             }
+
+            // Insert our new entry
+            this.favourites.splice(id, 1, new Favourite(id, m[2] ? parseInt(m[2], 10) : null, m[3]));
         }],
         [/^TMAN(AM|FM)$/, function (m) {
             if (this.input() === 'TUNER') {
@@ -309,9 +321,26 @@ function ViewModel() {
     ];
 
     this.selected_favourite.subscribe(function fn(new_id) {
-        fv_cmd = "FV " + (new_id < 10 ? "0" : "") + new_id;
+        var new_type = this.favourites()[new_id].type,
+            fv_string = (new_id < 10 ? "0" : "") + new_id;
+
+        // Return selection back to default after a bit
+        window.setTimeout((function () {
+            this.selected_favourite(0);
+        }).bind(this), 3000);
 
         if (new_id === 0) {
+            // Selected the title entry, ignore 
+            return;
+        }
+
+        if (new_type === 99) {
+            // Fill the empty entry, outside knockout machinations
+            window.setTimeout((function () {
+                if (window.confirm("Do you want to save a new favourite here?")) {
+                    this.send_cmd("FVMEM " + fv_string);
+                }
+            }).bind(this), 0);
             return;
         }
 
@@ -322,12 +351,7 @@ function ViewModel() {
             return;
         }
 
-        this.send_cmd(fv_cmd);
-
-        // Return selection back to default after a bit
-        window.setTimeout((function () {
-            this.selected_favourite(0);
-        }).bind(this), 3000);
+        this.send_cmd("FV " + fv_string);
     }, this);
 
     this.tick = function() {
