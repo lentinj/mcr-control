@@ -161,6 +161,28 @@ table.dpad td > * {
 
 <script type='text/javascript' src="/node_modules/knockout/build/output/knockout-latest.js"></script>
 <script>
+/*
+TODO:
+Unhandled: BDSTATUS 442000B100000123003200
+Unhandled: BDFOLDER NAME
+Unhandled: BDFILE NAME  
+Unhandled: BDSTATUS 442000B100000123003200
+Unhandled: TSONCE 2FFFF-FFFFF CD00 05 0
+Unhandled: TSEVERY 2FFFF-FFFFF CD00 05 0
+Unhandled: SLPOFF
+Unhandled: SSDIM100
+Unhandled: SSDIM000
+Unhandled: SSDIM100
+Unhandled: SSDIM025
+Unhandled: SSDIM075
+Unhandled: SSDIM100
+Unhandled: SLPOFF // Sleep timer
+Unhandled: CLK0135
+
+vm.send_cmd('CLK') // Show/hide clock
+
+*/
+
 function OsdLine() {
     this.text = ko.observable('');
     this.bits = ko.observable(0);
