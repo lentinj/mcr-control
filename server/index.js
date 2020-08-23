@@ -12,7 +12,7 @@ const hifi = new net.Socket();
 app.use(express.static(__dirname + '/../client'));
 
 if (process.argv.length < 3) {
-    console.log("Usage: " + process.argv[0] + " " + process.argv[1] + " (ip address)");
+    console.log("Usage: " + process.argv[0] + " " + process.argv[1] + " (ip address) [(listen port)]");
     process.exit(1);
 }
 
@@ -33,7 +33,7 @@ hifi.on('data', function(data) {
         if (!lines[i]) {
             continue
         }
-        console.log('Incoming: ' + lines[i]);
+        //console.log('Incoming: ' + lines[i]);
         wss.clients.forEach(function each(client) {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(lines[i]);
@@ -46,11 +46,11 @@ wss.on('connection', function connection(ws) {
     console.log('Reconnected');
 
     ws.on('message', function incoming(message) {
-        console.log('Sending ' + message);
+        //console.log('Sending ' + message);
         hifi.write(message + '\r');
     });
 });
 
-server.listen(8888, function listening() {
+server.listen(parseInt(process.argv[3], 10) || 8888, '127.0.0.1', function listening() {
     console.log('Listening on %d', server.address().port);
 });
