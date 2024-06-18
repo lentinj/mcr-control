@@ -16,13 +16,12 @@ Description=${PROJECT_NAME} daemon
 After=network.target
 
 [Service]
+Type=simple
 ExecStart=/usr/bin/nodejs ${PROJECT_PATH}/server/index.js ${APP_MCR_HOST} ${APP_PORT}
 WorkingDirectory=${PROJECT_PATH}/server
 DynamicUser=yes
 Restart=on-failure
 RestartSec=5s
-Type=simple
-StandardError=syslog
 
 [Install]
 WantedBy=multi-user.target
